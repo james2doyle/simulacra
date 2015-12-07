@@ -27,10 +27,10 @@ https://github.com/0x8890/simulacra
       </div>
     </div>
     <div class="right">
-      <code>Some things to try:</code>
+      <p>Live demo, try it out:</p>
       <ul>
         <li><code>data.name = "Caramel Latte"</code></li>
-        <li><code>data.details.size = ["L", "XL"]</code></li>
+        <li><code>data.details.size.push("Trenta")</code></li>
       </ul>
       <input type="text" name="eval" placeholder="Change data...">
     </div>
@@ -51,6 +51,9 @@ https://github.com/0x8890/simulacra
   window.data = {
     name: 'Pumpkin Spice Latte',
     details: {
+      meta: {
+        date: Date.now()
+      },
       size: [ 'Tall', 'Grande', 'Venti' ],
       vendor: 'Starbucks'
     }
@@ -63,6 +66,11 @@ https://github.com/0x8890/simulacra
   var bindings = bind(fragment, {
     name: bind($('.name')),
     details: bind($('.details'), {
+      meta: bind($('.details'), {
+        date: bind($('.details'), function (node, value) {
+          node.setAttribute('data-timestamp', value)
+        })
+      }),
       size: bind($('.size')),
       vendor: bind($('.vendor'))
     })

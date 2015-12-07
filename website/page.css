@@ -1,4 +1,14 @@
 @custom-selector :--header h1, h2, h3, h4, h5, h6;
+@custom-selector :--button button, .button;
+
+/* Disable focus. */
+*:focus { outline: none; }
+
+/* Text selection */
+::selection {
+  background: var(--color-code-b);
+  color: #fff;
+}
 
 body {
   background-color: var(--color-background);
@@ -38,8 +48,10 @@ pre code {
 }
 
 :--header {
+  color: var(--color-solid);
   font-size: calc(1em * 5 / 4);
   font-family: var(--font-header);
+  font-weight: 900;
   margin: calc(var(--line-height) * 8 / 5) 0 calc(var(--line-height) * 4 / 5);
 }
 
@@ -55,6 +67,7 @@ header {
   text-align: center;
   overflow: hidden;
   position: relative;
+  color: var(--color-solid);
 }
 
 header h1 {
@@ -67,12 +80,11 @@ header h1 {
 
 header h2 {
   font-size: calc(1em * 3 / 2);
-  margin: 0 0 calc(var(--line-height) * 4 / 3);
+  margin: 0 0 calc(var(--line-height) * 1);
 }
 
 header code {
   display: inline-block;
-  color: var(--color-body);
   background-color: rgba(0, 0, 0, 0.05);
   border-radius: var(--border-radius);
   line-height: calc(var(--mono-height) * 2);
@@ -87,8 +99,8 @@ header code:before {
 }
 
 header code,
-header .button {
-  color: var(--color-alt);
+header :--button {
+  color: var(--color-body);
   margin: 0 0.4em;
 }
 
@@ -130,8 +142,10 @@ header .button {
   padding-left: calc(var(--line-height) * 1 / 2);
 }
 
-.container > div > code {
-  color: var(--color-body);
+.container > div > p {
+  font-family: var(--font-header);
+  font-size: calc(1em * 4 / 5);
+  font-weight: bold;
 }
 
 .example input {
@@ -228,7 +242,7 @@ header .button {
 
 .product-container .details > div > span {
   display: inline-block;
-  padding: calc(var(--line-height) * 1 / 6 - 2px) 1em;
+  padding: calc(var(--line-height) * 1 / 6 - 2px) 0.8em;
   position: relative;
 }
 
@@ -269,7 +283,7 @@ article a {
   text-decoration: underline;
 }
 
-.button {
+:--button {
   display: inline-block;
   background-color: var(--color-button);
   border-radius: var(--border-radius);
@@ -280,6 +294,10 @@ article a {
   font-family: var(--font-mono);
   font-size: var(--size-mono);
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+:--button:hover {
+  color: #fff;
 }
 
 #corner {

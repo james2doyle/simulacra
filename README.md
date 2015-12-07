@@ -4,16 +4,23 @@
 [![npm Version](https://img.shields.io/npm/v/simulacra.svg?style=flat-square)](https://www.npmjs.com/package/simulacra)
 [![License](https://img.shields.io/npm/l/simulacra.svg?style=flat-square)](https://raw.githubusercontent.com/0x8890/simulacra/master/LICENSE)
 
-Simulacra.js provides one-way data binding from plain JavaScript objects to the DOM. Its size is roughly ~170 LOC, or 1.8 KB (min+gz). Get it from `npm`:
+Simulacra.js provides one-way data binding from plain JavaScript objects to the DOM. Its size is roughly ~270 LOC, or 2 KB (min+gz). Get it from `npm`:
 
 ```sh
 $ npm install simulacra --save
 ```
 
 
+## Abstract
+
+Simulacra.js aims to minimize the expression necessary to render a web application. In contrast with the public APIs of other software that interacts with the DOM, Simulacra.js exposes only a single function that accepts two arguments. It lacks a template syntax, so data binding works by selecting DOM nodes. All data binding beyond adding and removing elements, and changing plain text and form input values, is delegated to the DOM API.
+
+There is no coupling of templating with code, and no forced design paradigms, such as components. The goal is to demonstrate that ideas such as avoiding direct DOM manipulation and *unidirectional data flow* are not dependent on heavyweight software, and that it can be implemented with much better performance.
+
+
 ## Usage
 
-Simulacra.js uses plain old HTML with nothing that is coupled with implementation for templating. Here's a sample template, note that it's just a `<template>` tag without any data-binding attributes:
+Simulacra.js uses plain old HTML with nothing that is coupled with implementation for templating. Here's a sample template:
 
 ```html
 <template id="product">
@@ -37,7 +44,7 @@ var data = {
 }
 ```
 
-Simulacra.js exports only a single function, which does different things based on the types of the arguments. There are three use cases: defining mount & unmount functions for an element, defining nested bindings for an element, and defining a binding for a data object.
+Simulacra.js exports only a single function, which does different things based on the types of the arguments. There are three use cases: defining a mutator function for an element, defining nested bindings for an element, and defining a binding for a data object.
 
 ```js
 var bind = require('simulacra') // or `window.simulacra`
@@ -47,6 +54,7 @@ var bind = require('simulacra') // or `window.simulacra`
 function $ (selector) { return fragment.querySelector(selector) }
 
 var fragment = document.getElementById('product').content
+
 var bindings = bind(fragment, {
   name: bind($('.name')),
   details: bind($('.details'), {
@@ -58,11 +66,11 @@ var bindings = bind(fragment, {
 document.body.appendChild(bind(data, bindings))
 ```
 
-The DOM will update if any of the bound keys are assigned.
+The DOM will update if any of the bound keys are assigned a different value.
 
-All mount functions are "offline" operations, they mutate elements which exist only in memory. By default, the value will be assigned to the element's `textContent` property (or `value` or `checked` for inputs), additional functions for mounting and unmounting may be used for arbitrary element manipulation.
+By default, the value will be assigned to the element's `textContent` property (or `value` or `checked` for inputs), a user-defined mutator function may be used for arbitrary element manipulation.
 
-The mount & unmount functions are passed in as the second and third arguments respectively, and have the signature (`node`, `value`, `oldValue`, `index`). For example, to manipulate a node before mounting it, one may do this:
+The mutator function may be passed as the second argument to Simulacra.js, and has the signature (`node`, `value`, `oldValue`, `index`). For example, to manipulate a node in a custom way, one may do this:
 
 ```js
 bind($('.name'), function (node, value) {
@@ -70,7 +78,13 @@ bind($('.name'), function (node, value) {
 })
 ```
 
-The mount function gets run before a node is replaced, and the unmount function gets run before a node is removed. If there is no return value, then it's assumed that the specified node will be appended. It's possible to return a different node in the mount function, which enables heterogeneous collections.
+A mutator function can be determined to be an insert, mutate, or remove operation based on whether the value or previous value is `null`:
+
+- Value but not previous value: insert operation.
+- Value and previous value: mutate operation.
+- No value: remove operation.
+
+There is a special case for the mutator function: if the bound node is the same as its parent, its value will not be iterated over, and no index will be passed.
 
 
 ## Benchmarks
@@ -79,7 +93,7 @@ Simulacra.js is even faster than consecutively setting the `innerHTML` property.
 
 | Name              | Loading  | Scripting  | Rendering  | Painting  | Other  |
 |:------------------|:---------|:-----------|:-----------|:----------|:-------|
-| Simulacra.js      | 1 ms     | 9 ms       | 7 ms       | 27 ms     | 12 ms  |
+| Simulacra.js      | 1 ms     | 12 ms      | 6 ms       | 24 ms     | 8 ms   |
 | *innerHTML*       | 35 ms    | 32 ms      | 5 ms       | 24 ms     | 10 ms  |
 | Mithril.js        | 7 ms     | 69 ms      | 17 ms      | 25 ms     | 19 ms  |
 | jQuery            | 11 ms    | 101 ms     | 17 ms      | 25 ms     | 23 ms  |
@@ -91,29 +105,29 @@ To run the benchmarks, you will have to clone the repository and build it by run
 
 ## How it Works
 
-On initialization, Simulacra.js removes bound elements from the document and replaces them with a empty text node (marker) for memoizing its position. Based on a value in the bound data object, it clones template elements and applies the mount function on the cloned elements, and appends them near the marker or adjacent nodes.
+On initialization, Simulacra.js removes bound elements from the document and replaces them with an empty text node (marker) for memoizing its position. Based on a value in the bound data object, it clones template elements and applies the mutator function on the cloned elements, and appends them near the marker or adjacent nodes.
 
-When a bound key is assigned, it gets internally casted into an array if it is not an array already, and the values of the array are compared with previous values. Based on whether a value at an index has changed, Simulacra.js will unmount and mount a DOM Node corresponding to the value. This is faster and simpler than diffing changes between DOM trees, and performing DOM operations on "offline" nodes (not in the live tree) is faster than modifying live nodes.
+When a bound key is assigned, it gets internally casted into an array if it is not an array already, and the values of the array are compared with previous values. Based on whether a value at an index has changed, Simulacra.js will remove, insert, or mutate a DOM Node corresponding to the value. This is faster and simpler than diffing changes between DOM trees.
 
 
 ## Caveats
 
-The DOM will update if there is an assignment on the object, since it uses a property setter under the hood. This means that using the `delete` keyword will not trigger a DOM update. Also, arrays need to be assigned after a mutation, even if it is mutated in place. This is a conscious decision based on performance; replacing the prototype of an object causes [performance problems in every JavaScript engine](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf).
-
-The bound data object may not contain any getters & setters of its own, since they will be overridden by Simulacra.js.
+- The `delete` keyword will not trigger a DOM update. Although ES6 `Proxy` has a trap for this keyword, its browser support is lacking and it can not be polyfilled. Also, it would break the API of Simulacra.js for this one feature, so the recommended practice is to set the value to `null` rather than trying to `delete` the key.
+- Out-of-bounds array index assignment will not work, because the number of settters is equal to the length of the array.
+- The bound data object may not contain any conflicting getters & setters, since they will be overridden by Simulacra.js.
 
 
 ## Under the Hood
 
 This library is written in ES5 syntactically, and makes use of:
 
-- Object property getters & setters (ES5)
+- Object.defineProperty (ES5)
 - WeakMap (ES6)
 - TreeWalker (DOM Level 2)
 - Node.isEqualNode (DOM Level 3)
 - Node.contains (DOM Living Standard)
 
-No shims are included. At the bare minimum, it works in IE9+ with a WeakMap polyfill.
+No shims are included. At the bare minimum, it works in IE9+ with a WeakMap polyfill, but otherwise it should work in IE11+.
 
 
 ## License
